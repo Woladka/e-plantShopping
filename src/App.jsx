@@ -1,45 +1,29 @@
-
-import React, { useState } from 'react';
-import ProductList from './ProductList';
-import './App.css';
+import { useState } from 'react';
 import AboutUs from './AboutUs';
+import ProductList from './ProductList';
+import { AnalyticsProvider } from './analytics/AnalyticsProvider';
+import './App.css';
 
-function App() {
-  
-  const [showProductList, setShowProductList] = useState(false);
-
-  const handleGetStartedClick = () => {
-    setShowProductList(true);
-  };
+export default function App() {
+  const [showStore, setShowStore] = useState(false);
 
   return (
-    <div className="app-container">
-      <div className={`landing-page ${showProductList ? 'fade-out' : ''}`}>
-        <div className="background-image"></div>
-        <div className="content">
-         <div className="landing_content">
-         <h1>Welcome To Paradise Nursery</h1>
-          <div className="divider"></div>
-          <p>Where Green Meets Serenity</p>
-         
-          <button className="get-started-button" onClick={handleGetStartedClick}>
-            Get Started
-          </button>
-         </div>
-          <div className="aboutus_container">
-          <AboutUs/>
-          </div>
-          </div>
-
-      </div>
-      <div className={`product-list-container ${showProductList ? 'visible' : ''}`}>
+    <AnalyticsProvider>
+      {showStore ? (
         <ProductList />
-      </div>
-    </div>
+      ) : (
+        <main className="mrl-landing">
+          <section className="mrl-landing-content">
+            <h1>Can we trust our tracking?</h1>
+            <p>A demo plant shop for testing event tracking, consent and what happens when data goes missing.</p>
+            <button type="button" onClick={() => setShowStore(true)}>Explore the demo store</button>
+            <details className="mrl-about">
+              <summary>About Paradise Nursery</summary>
+              <AboutUs />
+            </details>
+          </section>
+        </main>
+      )}
+    </AnalyticsProvider>
   );
 }
-
-export default App;
-
-
-

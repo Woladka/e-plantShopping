@@ -1,81 +1,78 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import PropTypes from 'prop-types';
+import { useDispatch, useSelector } from 'react-redux';
 import { removeItem, updateQuantity } from './CartSlice';
-import './CartItem.css';
+import { useAnalytics } from './analytics/AnalyticsContext';
+import { formatEur } from './data/products';
 
-const CartItem = ({ onContinueShopping, onRemoveItem }) => {
-  const cart = useSelector(state => state.cart.items);
+export default function CartItem({ onContinueShopping }) {
+  const items = useSelector((state) => state.cart.items);
   const dispatch = useDispatch();
+  const { record } = useAnalytics();
+  const total = items.reduce((sum, item) => sum + item.priceEur * item.quantity, 0);
+  const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Calculate total amount for all products in the cart
-  const calculateTotalAmount = () => {
-    let totalAmount = 0;
-    cart.forEach(item => {
-      totalAmount += item.quantity * parseFloat(item.cost.replace('$', ''));
-    });
-    return totalAmount.toFixed(2); // Ensure the total is formatted to two decimal places
-  };
-
-  // Calculate total cost based on quantity for an item
-  const calculateTotalCost = (item) => {
-    return (item.quantity * parseFloat(item.cost.replace('$', ''))).toFixed(2);
-  };
-
-  const handleContinueShopping = () => {
-    if (onContinueShopping) {
-      onContinueShopping();
-    }
-  };
-
-  const handleIncrement = (item) => {
-    dispatch(updateQuantity({ name: item.name, quantity: item.quantity + 1 }));
-  };
-
-  const handleDecrement = (item) => {
-    if (item.quantity === 1) {
-        dispatch(removeItem({ name: item.name }));
-        onRemoveItem(item.name); // Notify ProductList to update the button state
+  function changeQuantity(item, quantity) {
+    if (quantity === 0) {
+      dispatch(removeItem({ id: item.id }));
     } else {
-        dispatch(updateQuantity({ name: item.name, quantity: item.quantity - 1 }));
+      dispatch(updateQuantity({ id: item.id, quantity }));
     }
-};
+  }
 
-
-const handleRemove = (item) => {
-    dispatch(removeItem({ name: item.name }));
-    onRemoveItem(item.name); // Notify ProductList to update the button state
-};
+  function beginCheckout() {
+    record('begin_checkout', 'demo_cart', Math.round(total * 100) / 100);
+    window.alert('Demo checkout only. No payment is required.');
+  }
 
   return (
-    <div className="cart-container">
-      <h2 style={{ color: 'black' }}>Total Cart Amount: ${calculateTotalAmount()}</h2>
-      <div>
-        {cart.map(item => (
-          <div className="cart-item" key={item.name}>
-            <img className="cart-item-image" src={item.image} alt={item.name} />
-            <div className="cart-item-details">
-              <div className="cart-item-name">{item.name}</div>
-              <div className="cart-item-cost">{item.cost}</div>
-              <div className="cart-item-quantity">
-                <button className="cart-item-button cart-item-button-dec" onClick={() => handleDecrement(item)}>-</button>
-                <span className="cart-item-quantity-value">{item.quantity}</span>
-                <button className="cart-item-button cart-item-button-inc" onClick={() => handleIncrement(item)}>+</button>
-              </div>
-              <div className="cart-item-total">Total: ${calculateTotalCost(item)}</div>
-              <button className="cart-item-delete" onClick={() => handleRemove(item)}>Delete</button>
-            </div>
+    <section className="mrl-cart" aria-label="Shopping cart">
+      <div className="mrl-heading">
+        <h2>Your demo cart</h2>
+        <button type="button" onClick={onContinueShopping}>Back to plants</button>
+      </div>
+      {items.length === 0 && <p>Your cart is empty.</p>}
+      {items.map((item) => (
+        <article className="mrl-cart-line" key={item.id}>
+          <span className="mrl-emoji" aria-hidden="true">{item.emoji}</span>
+          <div className="mrl-cart-product">
+            <strong>{item.name}</strong>
+            <p>{formatEur(item.priceEur)} each · {formatEur(item.priceEur * item.quantity)} total</p>
           </div>
-        ))}
+          <div className="mrl-qty">
+            <button
+              type="button"
+              aria-label={`Decrease ${item.name}`}
+              onClick={() => changeQuantity(item, item.quantity - 1)}
+            >
+              −
+            </button>
+            <span>{item.quantity}</span>
+            <button
+              type="button"
+              aria-label={`Increase ${item.name}`}
+              onClick={() => changeQuantity(item, item.quantity + 1)}
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            className="mrl-remove"
+            aria-label={`Remove ${item.name}`}
+            onClick={() => dispatch(removeItem({ id: item.id }))}
+          >
+            Remove
+          </button>
+        </article>
+      ))}
+      <div className="mrl-heading">
+        <strong>{quantity} {quantity === 1 ? 'item' : 'items'} · {formatEur(total)}</strong>
+        <button type="button" disabled={!items.length} onClick={beginCheckout}>Demo checkout</button>
       </div>
-      <div style={{ marginTop: '20px', color: 'black' }} className='total_cart_amount'></div>
-      <div className="continue_shopping_btn">
-      <button className="get-started-button" onClick={handleContinueShopping}>Continue Shopping</button>
-
-        <br />
-        <button className="get-started-button1">Checkout</button>
-      </div>
-    </div>
+    </section>
   );
-};
+}
 
-export default CartItem;
+CartItem.propTypes = {
+  onContinueShopping: PropTypes.func.isRequired,
+};
